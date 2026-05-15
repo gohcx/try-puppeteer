@@ -28,10 +28,10 @@ method: 'POST',
 headers: { 'content-type': 'application/json' },
 body: JSON.stringify({ code: oversized }),
 });
-const body = await response.json<{ error: string }>();
-expect(response.status).toBe(400);
-expect(body.error).toContain('Max 10000 characters');
-});
+		const body = await response.json<{ error: string }>();
+		expect(response.status).toBe(400);
+		expect(body.error).toContain('Max 10,000 characters');
+	});
 
 it('rejects forbidden keywords in /run', async () => {
 const response = await SELF.fetch('https://example.com/run', {

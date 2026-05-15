@@ -110,9 +110,9 @@ const userCode = body.code;
 if (!userCode || typeof userCode !== 'string') {
 return c.json({ error: 'Missing `code` in request body', logs: [] }, 400);
 }
-if (userCode.length > MAX_CODE_LENGTH) {
-return c.json({ error: `Code too long. Max ${MAX_CODE_LENGTH} characters.`, logs: [] }, 400);
-}
+	if (userCode.length > MAX_CODE_LENGTH) {
+		return c.json({ error: 'Code too long. Max 10,000 characters.', logs: [] }, 400);
+	}
 if (FORBIDDEN_PATTERNS.some((pattern) => pattern.test(userCode))) {
 return c.json({ error: 'Code contains blocked keywords/API usage.', logs: [] }, 400);
 }
@@ -300,7 +300,7 @@ return `<!doctype html>
         <button id="runBtn">▶ Run</button>
         <select id="exampleSelect"></select>
         <span id="status" class="status">Ready</span>
-        <span class="links"><a href="https://github.com/gohcx/try-puppeteer" target="_blank">GitHub</a><a href="https://developers.cloudflare.com/browser-rendering/" target="_blank">Cloudflare Docs</a></span>
+        <span class="links"><a href="https://github.com/gohcx/try-puppeteer" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://developers.cloudflare.com/browser-rendering/" target="_blank" rel="noopener noreferrer">Cloudflare Docs</a></span>
       </footer>
     </div>
 
@@ -421,7 +421,7 @@ return `<!doctype html>
       async function runCode() {
         const code = editor.state.doc.toString();
         if (code.length > 10000) {
-          setStatus('Error: code exceeds 10KB');
+          setStatus('Error: code exceeds 10,000 characters');
           return;
         }
         if (inflight) {
