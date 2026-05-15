@@ -1,0 +1,14 @@
+name = "try-puppeteer"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[browser]
+binding = "MYBROWSER"
+
+[[kv_namespaces]]
+binding = "EXAMPLES_KV"
+id = "00000000000000000000000000000000"
+
+[limits]
+cpu_ms = 30000
