@@ -29,44 +29,44 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 const EXAMPLES: Record<string, { id: string; name: string; code: string }> = {
-screenshot: {
-id: 'screenshot',
-name: '截图',
+	screenshot: {
+		id: 'screenshot',
+		name: 'Screenshot',
 code: `await page.goto('https://example.com', { waitUntil: 'domcontentloaded' });\nconst shot = await page.screenshot({ fullPage: true });\noutput.setScreenshot(shot);\noutput.setJson({ title: await page.title() });`,
 },
-evaluate: {
-id: 'evaluate',
-name: '获取页面数据',
+	evaluate: {
+		id: 'evaluate',
+		name: 'Get Page Data',
 code: `await page.goto('https://example.com');\nconst data = await page.evaluate(() => ({\n  title: document.title,\n  links: [...document.querySelectorAll('a')].map((a) => a.href),\n}));\noutput.setJson(data);`,
 },
-click: {
-id: 'click',
-name: '表单交互',
+	click: {
+		id: 'click',
+		name: 'Form Interaction',
 code: `await page.setContent('<form><input name="q" /><button type="submit">Go</button></form>');\nawait page.type('input[name="q"]', 'try puppeteer');\nawait page.click('button[type="submit"]');\noutput.setJson({ value: await page.$eval('input[name="q"]', (el) => el.value) });`,
 },
-intercept: {
-id: 'intercept',
-name: '请求拦截',
+	intercept: {
+		id: 'intercept',
+		name: 'Request Interception',
 code: `await page.setRequestInterception(true);\npage.on('request', (req) => req.continue());\npage.on('response', (res) => console.log('response', res.status(), res.url()));\nawait page.goto('https://example.com');\noutput.setJson({ intercepted: true });`,
 },
-pdf: {
-id: 'pdf',
-name: '生成 PDF',
+	pdf: {
+		id: 'pdf',
+		name: 'Generate PDF',
 code: `await page.goto('https://example.com');\nconst pdf = await page.pdf({ format: 'A4' });\noutput.setJson({ pdfBase64: bytesToBase64(pdf), bytes: pdf.length });`,
 },
-'wait-for': {
-id: 'wait-for',
-name: '等待元素',
+	'wait-for': {
+		id: 'wait-for',
+		name: 'Wait For Element',
 code: `await page.setContent('<div id="ready">loaded</div>');\nawait page.waitForSelector('#ready');\noutput.setJson({ ready: true });`,
 },
-emulate: {
-id: 'emulate',
-name: '移动端模拟',
+	emulate: {
+		id: 'emulate',
+		name: 'Mobile Emulation',
 code: `const devices = puppeteer.KnownDevices;\nawait page.emulate(devices['iPhone 15']);\nawait page.goto('https://example.com');\noutput.setJson({ ua: await page.evaluate(() => navigator.userAgent) });`,
 },
-'network-idle': {
-id: 'network-idle',
-name: '等待网络空闲',
+	'network-idle': {
+		id: 'network-idle',
+		name: 'Wait For Network Idle',
 code: `await page.goto('https://example.com', { waitUntil: 'networkidle0' });\noutput.setJson({ loadedAt: new Date().toISOString() });`,
 },
 };
