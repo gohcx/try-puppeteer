@@ -1,0 +1,23 @@
+{
+	"name": "try-puppeteer",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"typescript": "^5.5.2",
+		"vitest": "~3.2.0",
+		"wrangler": "^4.59.1"
+	},
+	"dependencies": {
+		"@cloudflare/puppeteer": "^1.1.0",
+		"codemirror": "^6.0.2",
+		"hono": "^4.12.18"
+	}
+}
