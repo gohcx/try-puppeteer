@@ -1,6 +1,6 @@
 # Try Puppeteer on Cloudflare Workers 🌐
 
-[English](#english) | [简体中文](/README_cn.md)
+[English](/README.md) | [简体中文](#简体中文)
 
 <p align="center">
   <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/gohcx/try-puppeteer">
@@ -13,53 +13,6 @@
     <img src="https://api.star-history.com/svg?repos=gohcx/try-puppeteer&type=Date" alt="Star Rating" />
   </a>
 </p>
-
----
-
-<h2 id="english">English</h2>
-
-A high-performance, secure, and fully interactive **Puppeteer Playground** built specifically for [Cloudflare Workers Browser Rendering API](https://developers.cloudflare.com/browser-rendering/). Write, test, and preview Puppeteer scripts directly from your browser with zero local setup!
-
-### ✨ Features
-
-- **Interactive UI Playground**: Write Puppeteer code directly in a modern code editor environment.
-- **Rich Preview Modes**: Beautifully renders Full-page Screenshots, PDFs (with a built-in interactive viewer and download support), and syntax-highlighted JSON outputs.
-- **Secure Sandboxing**: Uses `sval` AST interpreter to parse and execute user-submitted code safely on the Edge, completely bypassing V8's dynamic code generation (`eval()`) blocks.
-- **Robust Lifecycle Management**: Implements JavaScript Proxy techniques to manage browser instances intelligently. This prevents Cloudflare Rate Limiting (`429`) and memory leaks caused by hanging browsers, even if the user code crashes or is aborted midway.
-- **Built-in Tutorials**: Comes with high-quality, practical examples including SEO data extraction, mobile device emulation, wait strategies, and network interception.
-
-### 🚀 Local Development
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Generate Types:
-```bash
-npm run cf-typegen
-```
-
-3. Run the development server:
-```bash
-npm run dev -- --remote
-```
-> **Note**: Cloudflare's Browser Rendering API requires the `--remote` flag to execute against actual browser instances.
-
-### 🗺️ API Routes
-
-- `GET /` - UI playground
-- `GET /examples` - Built-in example list
-- `GET /examples/:id` - Get a specific example
-- `POST /run` - Execute code safely in the sandbox
-
-### ☁️ Deployment
-
-You can deploy directly to your Cloudflare account using Wrangler:
-```bash
-npm run deploy
-```
-Make sure you have Browser Rendering enabled in your Cloudflare dashboard and the `MYBROWSER` binding correctly configured in your `wrangler.toml`.
 
 ---
 
