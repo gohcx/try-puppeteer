@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>try-puppeteer</title>
+    <style>
+      :root { color-scheme: light dark; --bg:#111827; --panel:#1f2937; --line:#374151; --fg:#f3f4f6; --muted:#9ca3af; }
+      @media (prefers-color-scheme: light) {
+        :root { --bg:#f5f7fb; --panel:#ffffff; --line:#d1d5db; --fg:#111827; --muted:#6b7280; }
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+      #app { display:grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr auto; height: 100vh; gap: 12px; padding: 12px; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow:hidden; min-height: 0; }
+      #editorWrap { height: 100%; display:flex; flex-direction: column; }
+      #editorPrefix { margin:0; padding:10px 12px; font-family: ui-monospace, SFMono-Regular, monospace; font-size:13px; color:var(--muted); border-bottom:1px solid var(--line); background: rgba(255,255,255,0.01); }
+      #editorArea { position: relative; flex: 1; }
+      #editorHighlight { position: absolute; inset: 0; margin: 0; padding: 12px; pointer-events: none; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, monospace; font-size:13px; color: transparent; }
+      #editor { position: absolute; inset: 0; margin: 0; padding: 12px; border: 0; outline: none; resize: none; width:100%; height:100%; background: transparent; color: transparent; caret-color: var(--fg); font-family: ui-monospace, SFMono-Regular, monospace; font-size:13px; line-height:1.5; tab-size:2; }
+      #editorHighlight .kw { color: #60a5fa; }
+      #editorHighlight .str { color: #f59e0b; }
+      #editorHighlight .num { color: #fb7185; }
+      #editorHighlight .cmnt { color: var(--muted); }
+      #right { display:grid; grid-template-rows: 1fr 1fr; gap: 12px; min-height:0; }
+      .section { display:flex; flex-direction: column; min-height:0; }
+      .tabs { display:flex; gap: 8px; border-bottom: 1px solid var(--line); padding: 8px; }
+      .tab { border: 1px solid var(--line); background: transparent; color: inherit; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+      .tab.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+      .view { flex: 1; overflow:auto; padding: 12px; }
+      #shot { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; cursor: zoom-in; }
+      .placeholder { color: var(--muted); }
+      #logs { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; }
+      .log-line { margin-bottom: 6px; white-space: pre-wrap; word-break: break-word; }
+      .log-line.error { color: #f87171; }
+      .log-line.warn { color: #fbbf24; }
+      .timestamp { color: var(--muted); margin-right: 8px; }
+      .toolbar { grid-column: 1 / -1; display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background: var(--panel); }
+      button, select { background:transparent; color:inherit; border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
+      button[disabled] { opacity:0.6; }
+      .status { color: var(--muted); margin-left:auto; }
+      .links { display:flex; gap: 10px; }
+      a { color: #60a5fa; text-decoration: none; }
+      details { margin-left: 10px; }
+      .json-leaf { margin-left: 10px; }
+      @media (max-width: 900px) { #app { grid-template-columns: 1fr; grid-template-rows: 40vh 1fr auto; } }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <section class="panel">
+        <div id="editorWrap">
+          <pre id="editorPrefix"></pre>
+          <div id="editorArea">
+            <pre id="editorHighlight" aria-hidden="true"></pre>
+            <textarea id="editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+          </div>
+        </div>
+      </section>
+      <section id="right">
+        <div class="panel section">
+          <div class="tabs">
+            <button class="tab active" data-tab="shot">Screenshot</button>
+            <button class="tab" data-tab="json">JSON</button>
+          </div>
+          <div class="view" id="preview"><p class="placeholder">Run code to see screenshot or JSON output.</p></div>
+        </div>
+        <div class="panel section">
+          <div class="tabs"><button id="clearLogs">Clear Logs</button></div>
+          <div class="view" id="logs"><p class="placeholder">Console logs will appear here.</p></div>
+        </div>
+      </section>
+      <footer class="toolbar">
+        <button id="runBtn">▶ Run</button>
+        <select id="exampleSelect"></select>
+        <span id="status" class="status">Ready</span>
+        <span class="links"><a href="https://github.com/gohcx/try-puppeteer" target="_blank" rel="noopener noreferrer">GitHub</a><a href="https://developers.cloudflare.com/browser-rendering/" target="_blank" rel="noopener noreferrer">Cloudflare Docs</a></span>
+      </footer>
+    </div>
+
+    <script>
+      window.__DEFAULT_CODE__ = "const browser = await puppeteer.launch();\nconst page = await browser.newPage();\nawait page.goto('https://example.com', { waitUntil: 'domcontentloaded' });\nconst shot = await page.screenshot({ fullPage: true });\noutput.setScreenshot(shot);\noutput.setJson({ title: await page.title() });";
+      window.__JSON_PLACEHOLDER__ = "<details open><summary>root</summary><div class=\"json-children\"><div class=\"json-leaf\"><span class=\"json-key\">message</span>: <span class=\"json-value\">&quot;JSON output appears here&quot;</span></div></div></details>";
+      window.__EDITOR_PREFIX__ = "const puppeteer = require('puppeteer');";
+    </script>
+    <script>
+      const runBtn = document.getElementById('runBtn');
+      const statusEl = document.getElementById('status');
+      const logsEl = document.getElementById('logs');
+      const previewEl = document.getElementById('preview');
+      const selectEl = document.getElementById('exampleSelect');
+      const clearLogs = document.getElementById('clearLogs');
+      const editor = document.getElementById('editor');
+      const editorPrefixEl = document.getElementById('editorPrefix');
+      const editorHighlight = document.getElementById('editorHighlight');
+      let currentTab = 'shot';
+      let inflight = null;
+      let latest = { screenshot: null, json: null };
+
+      // set fixed prefix (read-only) and initial body
+      editorPrefixEl.textContent = window.__EDITOR_PREFIX__;
+      editor.value = window.__DEFAULT_CODE__;
+      updateHighlight();
+
+      const runAction = () => runCode();
+
+      editor.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+          event.preventDefault();
+          runAction();
+        }
+      });
+
+      editor.addEventListener('input', () => updateHighlight());
+      editor.addEventListener('scroll', () => {
+        editorHighlight.scrollTop = editor.scrollTop;
+        editorHighlight.scrollLeft = editor.scrollLeft;
+      });
+
+      function escapeForHtml(s) {
+        return String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+      }
+
+      function updateHighlight() {
+        const v = editor.value;
+        const keywords = new Set(['await','const','let','var','function','return','if','else','for','while','try','catch','new','require','class']);
+        let out = '';
+        for (let i = 0; i < v.length; ) {
+          const ch = v[i];
+          if (ch === "'" || ch === '"') {
+            const q = ch;
+            let j = i + 1;
+            while (j < v.length && v[j] !== q) {
+              if (v[j] === '\\' && j + 1 < v.length) j += 2;
+              else j++;
+            }
+            if (j < v.length) j++;
+            const str = v.slice(i, j);
+            out += '<span class="str">' + escapeForHtml(str) + '</span>';
+            i = j;
+            continue;
+          }
+          if (/[0-9]/.test(ch)) {
+            let j = i;
+            while (j < v.length && /[0-9]/.test(v[j])) j++;
+            out += '<span class="num">' + escapeForHtml(v.slice(i, j)) + '</span>';
+            i = j;
+            continue;
+          }
+          if (/[A-Za-z_$]/.test(ch)) {
+            let j = i;
+            while (j < v.length && /[A-Za-z0-9_$]/.test(v[j])) j++;
+            const word = v.slice(i, j);
+            if (keywords.has(word)) out += '<span class="kw">' + escapeForHtml(word) + '</span>';
+            else out += escapeForHtml(word);
+            i = j;
+            continue;
+          }
+          out += escapeForHtml(ch);
+          i++;
+        }
+        editorHighlight.innerHTML = out;
+      }
+
+      function setStatus(text) { statusEl.textContent = text; }
+      function addLog(type, message, at = new Date().toISOString()) {
+        if (logsEl.querySelector('.placeholder')) logsEl.innerHTML = '';
+        const line = document.createElement('div');
+        line.className = 'log-line ' + type;
+        const icon = type === 'error' ? '⛔' : type === 'warn' ? '⚠️' : '•';
+        line.innerHTML = '<span class="timestamp">[' + new Date(at).toLocaleTimeString() + ']</span>' + icon + ' ' + message;
+        logsEl.appendChild(line);
+        logsEl.scrollTop = logsEl.scrollHeight;
+      }
+
+      function escapeHtml(input) {
+        return String(input)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function renderJsonTree(value, key = 'root') {
+        if (value === null || typeof value !== 'object') {
+          return '<div class="json-leaf"><span class="json-key">' + escapeHtml(key) + '</span>: <span class="json-value">' + escapeHtml(JSON.stringify(value)) + '</span></div>';
+        }
+        const entries = Array.isArray(value) ? value.map((v, i) => [String(i), v]) : Object.entries(value);
+        return '<details open><summary>' + escapeHtml(key) + '</summary><div class="json-children">' + entries.map(([k, v]) => renderJsonTree(v, k)).join('') + '</div></details>';
+      }
+
+      function renderPreview() {
+        if (currentTab === 'shot') {
+          if (!latest.screenshot) {
+            previewEl.innerHTML = '<p class="placeholder">No screenshot yet.</p>';
+            return;
+          }
+          previewEl.innerHTML = '<img id="shot" alt="screenshot preview" src="' + latest.screenshot + '" />';
+          document.getElementById('shot').addEventListener('click', () => window.open(latest.screenshot, '_blank'));
+          return;
+        }
+        previewEl.innerHTML = latest.json === null ? window.__JSON_PLACEHOLDER__ : renderJsonTree(latest.json, 'result');
+      }
+
+      document.querySelectorAll('.tab').forEach((el) => {
+        el.addEventListener('click', () => {
+          currentTab = el.dataset.tab;
+          document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+          el.classList.add('active');
+          renderPreview();
+        });
+      });
+
+      clearLogs.addEventListener('click', () => {
+        logsEl.innerHTML = '<p class="placeholder">Console logs will appear here.</p>';
+      });
+
+      async function loadExamples() {
+        const r = await fetch('/examples');
+        const data = await r.json();
+        data.examples.forEach((ex) => {
+          const opt = document.createElement('option');
+          opt.value = ex.id;
+          opt.textContent = ex.name + ' (' + ex.id + ')';
+          selectEl.appendChild(opt);
+        });
+        selectEl.value = 'screenshot';
+      }
+
+      selectEl.addEventListener('change', async () => {
+        const id = selectEl.value;
+        const r = await fetch('/examples/' + id);
+        const ex = await r.json();
+        if (!ex.code) return;
+        editor.value = ex.code;
+        updateHighlight();
+      });
+
+      async function runCode() {
+        const code = (editorPrefixEl.textContent || '') + editor.value;
+        if (code.length > 10000) {
+          setStatus('Error: code exceeds 10,000 characters');
+          return;
+        }
+        if (inflight) {
+          inflight.abort();
+          inflight = null;
+          runBtn.textContent = '▶ Run';
+          setStatus('Stopped');
+          return;
+        }
+        inflight = new AbortController();
+        runBtn.textContent = '◼ Stop';
+        setStatus('Running...');
+        const start = performance.now();
+        try {
+          const response = await fetch('/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+            signal: inflight.signal,
+          });
+          const data = await response.json();
+          if (Array.isArray(data.logs)) {
+            data.logs.forEach((line) => addLog(line[0], line[1], line[2]));
+          }
+          if (data.screenshot) latest.screenshot = data.screenshot;
+          if (data.json !== undefined) latest.json = data.json;
+          renderPreview();
+          if (data.error) {
+            addLog('error', data.error);
+            setStatus('Error');
+          } else {
+            setStatus('Done in ' + ((performance.now() - start) / 1000).toFixed(2) + 's');
+          }
+        } catch (e) {
+          const msg = e && e.name === 'AbortError' ? 'Request aborted' : String(e);
+          addLog('error', msg);
+          setStatus('Error');
+        } finally {
+          inflight = null;
+          runBtn.textContent = '▶ Run';
+        }
+      }
+
+      runBtn.addEventListener('click', runCode);
+      await loadExamples();
+      renderPreview();
+    </script>
+  </body>
+</html>
