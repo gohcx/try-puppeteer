@@ -8,7 +8,4 @@ binding = "MYBROWSER"
 
 [[kv_namespaces]]
 binding = "EXAMPLES_KV"
-id = "00000000000000000000000000000000"
-
-[limits]
-cpu_ms = 30000
+id = "3371ed42a1a34fb092b1c046b323564f"
