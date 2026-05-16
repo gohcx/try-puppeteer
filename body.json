@@ -1,0 +1,1 @@
+﻿{"code":"const browser = await puppeteer.launch(); const page = await browser.newPage(); await page.goto('https://example.com'); output.setJson({title: await page.title()}); await browser.close();"}
