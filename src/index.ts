@@ -1,5 +1,6 @@
 import puppeteer from '@cloudflare/puppeteer';
 import { Hono } from 'hono';
+import Sval from 'sval';
 
 type BrowserBinding = unknown;
 
@@ -32,43 +33,43 @@ const EDITOR_PREFIX = `const puppeteer = require('puppeteer');`;
 const EXAMPLES: Record<string, { id: string; name: string; code: string }> = {
   screenshot: {
     id: 'screenshot',
-    name: 'Screenshot',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.goto('https://example.com', { waitUntil: 'domcontentloaded' });\nconst shot = await page.screenshot({ fullPage: true });\noutput.setScreenshot(shot);\noutput.setJson({ title: await page.title() });`,
+    name: 'Tutorial: Take a basic screenshot',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // Navigate to a website\n  await page.goto('https://example.com', { waitUntil: 'domcontentloaded' });\n  \n  // Take a full page screenshot\n  const shot = await page.screenshot({ fullPage: true });\n  \n  // Send screenshot back to the UI\n  output.setScreenshot(shot);\n  \n  await browser.close();\n})();`,
   },
   evaluate: {
     id: 'evaluate',
-    name: 'Get Page Data',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.goto('https://example.com');\nconst data = await page.evaluate(() => ({\n  title: document.title,\n  links: [...document.querySelectorAll('a')].map((a) => a.href),\n}));\noutput.setJson(data);`,
+    name: 'Tutorial: Extract SEO Data to JSON',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // Load the page\n  await page.goto('https://example.com');\n  \n  // Run JavaScript inside the browser to extract SEO data\n  const seoData = await page.evaluate(() => ({\n    title: document.title,\n    h1: document.querySelector('h1') ? document.querySelector('h1').innerText : 'No H1',\n    links: [...document.querySelectorAll('a')].map((a) => a.href),\n  }));\n  \n  // Send the extracted JSON back to the UI\n  output.setJson(seoData);\n  \n  await browser.close();\n})();`,
   },
   click: {
     id: 'click',
-    name: 'Form Interaction',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.setContent('<form><input name="q" /><button type="submit">Go</button></form>');\nawait page.type('input[name="q"]', 'try puppeteer');\nawait page.click('button[type="submit"]');\noutput.setJson({ value: await page.$eval('input[name="q"]', (el) => el.value) });`,
+    name: 'Tutorial: Interact with Forms',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // Set up a fake form for testing\n  await page.setContent('<form><input name="q" /><button type="submit">Go</button></form>');\n  \n  // Type text into the input field\n  await page.type('input[name="q"]', 'Cloudflare Workers');\n  \n  // Click the submit button\n  await page.click('button[type="submit"]');\n  \n  // Retrieve the updated value to verify\n  const val = await page.$eval('input[name="q"]', (el) => el.value);\n  output.setJson({ inputValue: val, success: true });\n  \n  await browser.close();\n})();`,
   },
   intercept: {
     id: 'intercept',
-    name: 'Request Interception',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.setRequestInterception(true);\npage.on('request', (req) => req.continue());\npage.on('response', (res) => console.log('response', res.status(), res.url()));\nawait page.goto('https://example.com');\noutput.setJson({ intercepted: true });`,
+    name: 'Tutorial: Block Network Requests',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // Enable request interception\n  await page.setRequestInterception(true);\n  \n  // Block all images from loading to save bandwidth\n  page.on('request', (req) => {\n    if (req.resourceType() === 'image') req.abort();\n    else req.continue();\n  });\n  \n  await page.goto('https://example.com');\n  output.setJson({ message: 'Images successfully blocked!' });\n  \n  await browser.close();\n})();`,
   },
   pdf: {
     id: 'pdf',
-    name: 'Generate PDF',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.goto('https://example.com');\nconst pdf = await page.pdf({ format: 'A4' });\noutput.setJson({ pdfBase64: bytesToBase64(pdf), bytes: pdf.length });`,
+    name: 'Tutorial: Export page as PDF',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  await page.goto('https://example.com');\n  \n  // Generate a PDF buffer\n  const pdf = await page.pdf({ format: 'A4' });\n  \n  // Output PDF directly to the new PDF tab\n  output.setPdf(pdf);\n  output.setJson({ message: 'PDF generated successfully!' });\n  \n  await browser.close();\n})();`,
   },
   'wait-for': {
     id: 'wait-for',
-    name: 'Wait For Element',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.setContent('<div id="ready">loaded</div>');\nawait page.waitForSelector('#ready');\noutput.setJson({ ready: true });`,
+    name: 'Tutorial: Wait for Elements',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // Inject an element that appears after 2 seconds\n  await page.setContent('<script>setTimeout(() => document.body.innerHTML="<div id=\\'ready\\'>loaded</div>", 2000)</script>');\n  \n  console.log('Waiting for #ready element to appear...');\n  \n  // Pauses script execution until #ready is found in the DOM\n  await page.waitForSelector('#ready');\n  \n  console.log('Element found!');\n  output.setJson({ ready: true });\n  \n  await browser.close();\n})();`,
   },
   emulate: {
     id: 'emulate',
-    name: 'Mobile Emulation',
-    code: `const puppeteer = require('puppeteer');\n\nconst devices = puppeteer.KnownDevices;\nawait page.emulate(devices['iPhone 15']);\nawait page.goto('https://example.com');\noutput.setJson({ ua: await page.evaluate(() => navigator.userAgent) });`,
+    name: 'Tutorial: Emulate Mobile Device',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // Manually configure device emulation (e.g. iPhone 15 Pro)\n  await page.setViewport({ width: 393, height: 852, isMobile: true, hasTouch: true });\n  await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1');\n  \n  await page.goto('https://example.com');\n  \n  // Take a mobile-sized screenshot\n  const shot = await page.screenshot({ fullPage: true });\n  output.setScreenshot(shot);\n  \n  await browser.close();\n})();`,
   },
   'network-idle': {
     id: 'network-idle',
-    name: 'Wait For Network Idle',
-    code: `const puppeteer = require('puppeteer');\n\nawait page.goto('https://example.com', { waitUntil: 'networkidle0' });\noutput.setJson({ loadedAt: new Date().toISOString() });`,
+    name: 'Tutorial: Wait for fully loaded',
+    code: `const puppeteer = require('puppeteer');\n\n(async () => {\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n  \n  // networkidle0 waits until there are no more than 0 network connections for at least 500 ms.\n  // Extremely useful for modern SPAs (React/Vue sites)\n  await page.goto('https://example.com', { waitUntil: 'networkidle0' });\n  \n  output.setJson({ loadedAt: new Date().toISOString() });\n  \n  await browser.close();\n})();`,
   },
 };
 
@@ -130,21 +131,51 @@ app.post('/run', async (c) => {
   let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
   try {
     browser = await puppeteer.launch(c.env.MYBROWSER as never);
+    
+    // Ensure we close the browser if the user clicks "Stop" (aborts the fetch request)
+    c.req.raw.signal.addEventListener('abort', () => {
+      if (browser) {
+        browser.close().catch(() => {});
+      }
+    });
+
     const page = await browser.newPage();
 
-    const AsyncFunction = Object.getPrototypeOf(async () => undefined).constructor as new (
-      ...args: string[]
-    ) => (
-      pageArg: unknown,
-      browserArg: unknown,
-      logsArg: LogEntry[],
-      outputArg: {
-        setJson: (value: unknown) => void;
-        setScreenshot: (value: string | Uint8Array | ArrayBuffer) => void;
-      },
-      bytesToBase64: (value: Uint8Array | ArrayBuffer) => string,
-      puppeteerLib: typeof puppeteer,
-    ) => Promise<void>;
+    const interpreter = new Sval({ sandBox: true, ecmaVer: 10, async: true });
+
+    // AST transformation to preserve source code for page.evaluate calls
+    let processedCode = userCode;
+    try {
+      const ast = interpreter.parse(userCode);
+      const evaluateCalls: any[] = [];
+      const walk = (node: any) => {
+        if (!node) return;
+        if (node.type === 'CallExpression' && node.callee.type === 'MemberExpression' && node.callee.property.name === 'evaluate') {
+          evaluateCalls.push(node);
+        }
+        for (const key in node) {
+          if (node[key] && typeof node[key] === 'object') {
+            walk(node[key]);
+          }
+        }
+      };
+      walk(ast);
+      
+      // Replace backwards to avoid shifting offsets
+      for (let i = evaluateCalls.length - 1; i >= 0; i--) {
+        const arg = evaluateCalls[i].arguments[0];
+        if (arg && (arg.type === 'ArrowFunctionExpression' || arg.type === 'FunctionExpression')) {
+          const fnSource = userCode.slice(arg.start, arg.end);
+          const replacement = `Object.assign(${fnSource}, { toString: () => ${JSON.stringify(fnSource)} })`;
+          processedCode = processedCode.slice(0, arg.start) + replacement + processedCode.slice(arg.end);
+        }
+      }
+    } catch (e) {
+      // If parsing fails, just let Sval fail natively during execution
+    }
+
+    // Ensure the main export returns the promise from the user's IIFE
+    processedCode = processedCode.replace(/\(async\s*\(\)\s*=>\s*\{/, 'return (async () => {');
 
     const wrapped = `
 const console = {
@@ -152,54 +183,87 @@ const console = {
   warn: (...args) => __logs.push(['warn', args.map(String).join(' '), new Date().toISOString()]),
   error: (...args) => __logs.push(['error', args.map(String).join(' '), new Date().toISOString()]),
 };
-// safe require shim: only allow requiring puppeteer
 const require = (name) => {
-  if (name === 'puppeteer') return __puppeteerLib;
+  if (name === 'puppeteer') {
+    return {
+      ...__puppeteerLib,
+      launch: async () => {
+        // Use a Proxy so we don't mutate the original browser object and cause memory leaks
+        return new Proxy(__browser, {
+          get(target, prop) {
+            if (prop === 'close') return async () => {};
+            const val = target[prop];
+            return typeof val === 'function' ? val.bind(target) : val;
+          }
+        });
+      }
+    };
+  }
   throw new Error('require is restricted in this environment');
 };
-${userCode}
+exports.main = async () => {
+${processedCode}
+};
 `;
 
-    const fn = new AsyncFunction(
-      'page',
-      'browser',
-      '__logs',
-      'output',
-      'bytesToBase64',
-      '__puppeteerLib',
-      wrapped,
-    );
+    interpreter.import({
+      __logs: logs,
+      output: {
+        setJson: (value: unknown) => {
+          result.json = value;
+        },
+        setScreenshot: (value: string | Uint8Array | ArrayBuffer) => {
+          if (typeof value === 'string') {
+            result.screenshot = value.startsWith('data:image/') ? value : `data:image/png;base64,${value}`;
+            return;
+          }
+          result.screenshot = `data:image/png;base64,${bytesToBase64(value)}`;
+        },
+        setPdf: (value: string | Uint8Array | ArrayBuffer) => {
+          if (typeof value === 'string') {
+            result.pdf = value.startsWith('data:application/pdf') ? value : `data:application/pdf;base64,${value}`;
+            return;
+          }
+          result.pdf = `data:application/pdf;base64,${bytesToBase64(value)}`;
+        },
+      },
+      bytesToBase64,
+      __puppeteerLib: puppeteer,
+      __browser: browser,
+      setTimeout: (cb: Function, ms?: number, ...args: unknown[]) => {
+        return setTimeout(cb, Math.min(ms || 0, 3000), ...args);
+      },
+      clearTimeout,
+    });
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('Execution timed out after 30 seconds')), EXECUTION_TIMEOUT_MS);
     });
 
+    const executePromise = (async () => {
+      interpreter.run(wrapped);
+      if (typeof interpreter.exports.main === 'function') {
+        await interpreter.exports.main();
+      }
+    })();
+    // Attach a no-op catch handler to prevent unhandled rejections if the promise
+    // rejects AFTER Promise.race has already finished (e.g. on timeout)
+    executePromise.catch(() => {});
+
     await Promise.race([
-      fn(
-        page,
-        browser,
-        logs,
-        {
-          setJson: (value: unknown) => {
-            result.json = value;
-          },
-          setScreenshot: (value: string | Uint8Array | ArrayBuffer) => {
-            if (typeof value === 'string') {
-              result.screenshot = value.startsWith('data:image/') ? value : `data:image/png;base64,${value}`;
-              return;
-            }
-            result.screenshot = `data:image/png;base64,${bytesToBase64(value)}`;
-          },
-        },
-        bytesToBase64,
-        puppeteer,
-      ),
+      executePromise,
       timeoutPromise,
     ]);
 
     if (!result.screenshot) {
-      const screenshotBuffer = await page.screenshot({ fullPage: true });
-      result.screenshot = `data:image/png;base64,${bytesToBase64(screenshotBuffer)}`;
+      try {
+        const pages = await browser.pages();
+        const activePage = pages.length > 1 ? pages[pages.length - 1] : page;
+        const screenshotBuffer = await activePage.screenshot({ fullPage: true });
+        result.screenshot = `data:image/png;base64,${bytesToBase64(screenshotBuffer)}`;
+      } catch (e) {
+        // browser or page might be closed
+      }
     }
 
     return c.json({ ...result, durationMs: Date.now() - started });
@@ -285,16 +349,33 @@ function renderHtml(): string {
       .timestamp { color: var(--muted); margin-right: 8px; }
       .toolbar { grid-column: 1 / -1; display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background: var(--panel); }
       button, select { background:transparent; color:inherit; border:1px solid var(--line); border-radius:6px; padding:6px 10px; }
+      select option { background: var(--panel); color: var(--fg); }
       button[disabled] { opacity:0.6; }
       .status { color: var(--muted); margin-left:auto; }
       .links { display:flex; gap: 10px; }
       a { color: #60a5fa; text-decoration: none; }
-      details { margin-left: 10px; }
-      .json-leaf { margin-left: 10px; }
+      .json-code { margin: 0; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+      .json-string { color: #a5d6ff; }
+      .json-number { color: #fb7185; }
+      .json-boolean { color: #34d399; }
+      .json-null { color: var(--muted); font-style: italic; }
+      .json-key { color: #60a5fa; }
+      .modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.8); align-items:center; justify-content:center; flex-direction:column; gap:15px; }
+      .modal.show { display:flex; }
+      .modal img { max-width:90%; max-height:80%; border-radius:8px; border:2px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+      .modal-close { position:absolute; top:20px; right:30px; color:var(--fg); font-size:40px; font-weight:bold; cursor:pointer; }
+      .modal-download { background:var(--brand); color:#fff; border:none; padding:10px 20px; font-size:16px; border-radius:6px; cursor:pointer; text-decoration:none; display:inline-block; font-family:inherit; font-weight:bold; }
+      .modal-download:hover { opacity:0.9; }
       @media (max-width: 900px) { #app { grid-template-columns: 1fr; grid-template-rows: 40vh 1fr auto; } }
     </style>
   </head>
   <body>
+    <div id="imageModal" class="modal">
+      <span class="modal-close" onclick="document.getElementById('imageModal').classList.remove('show')">&times;</span>
+      <img id="modalImage" src="" />
+      <a id="modalDownload" class="modal-download" download="screenshot.png">⬇ Download Image</a>
+    </div>
+
     <div id="app">
       <section class="panel">
         <div id="editorWrap">
@@ -491,12 +572,36 @@ function renderHtml(): string {
           .replaceAll(\"'\", '&#39;');
       }
 
-      function renderJsonTree(value, key = 'root') {
-        if (value === null || typeof value !== 'object') {
-          return '<div class="json-leaf"><span class="json-key">' + escapeHtml(key) + '</span>: <span class="json-value">' + escapeHtml(JSON.stringify(value)) + '</span></div>';
+      function syntaxHighlightJson(json) {
+        if (typeof json !== 'string') {
+          json = JSON.stringify(json, null, 2);
         }
-        const entries = Array.isArray(value) ? value.map((v, i) => [String(i), v]) : Object.entries(value);
-        return '<details open><summary>' + escapeHtml(key) + '</summary><div class="json-children">' + entries.map(([k, v]) => renderJsonTree(v, k)).join('') + '</div></details>';
+        json = escapeHtml(json);
+        return '<pre class="json-code">' + json.replace(/(&quot;(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\&quot;])*&quot;(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+          let cls = 'json-number';
+          if (/^&quot;/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = 'json-key';
+            } else {
+              cls = 'json-string';
+            }
+          } else if (/true|false/.test(match)) {
+            cls = 'json-boolean';
+          } else if (/null/.test(match)) {
+            cls = 'json-null';
+          }
+          return '<span class="' + cls + '">' + match + '</span>';
+        }) + '</pre>';
+      }
+
+      function base64ToBlobUrl(base64, type) {
+        const binStr = atob(base64.split(',')[1]);
+        const len = binStr.length;
+        const arr = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          arr[i] = binStr.charCodeAt(i);
+        }
+        return URL.createObjectURL(new Blob([arr], { type }));
       }
 
       function renderPreview() {
@@ -505,11 +610,27 @@ function renderHtml(): string {
             previewEl.innerHTML = '<p class="placeholder">No screenshot yet.</p>';
             return;
           }
-          previewEl.innerHTML = '<img id="shot" alt="screenshot preview" src="' + latest.screenshot + '" />';
-          document.getElementById('shot').addEventListener('click', () => window.open(latest.screenshot, '_blank'));
+          previewEl.innerHTML = '<img id="shot" alt="screenshot preview" src="' + latest.screenshot + '" style="cursor:zoom-in" />';
+          document.getElementById('shot').addEventListener('click', () => {
+            document.getElementById('modalImage').src = latest.screenshot;
+            document.getElementById('modalDownload').href = latest.screenshot;
+            document.getElementById('imageModal').classList.add('show');
+          });
           return;
         }
-        previewEl.innerHTML = latest.json === null ? window.__JSON_PLACEHOLDER__ : renderJsonTree(latest.json, 'result');
+        if (currentTab === 'pdf') {
+          if (!latest.pdf) {
+            previewEl.innerHTML = '<p class="placeholder">No PDF generated.</p>';
+            return;
+          }
+          if (!latest.pdfBlobUrl) {
+            latest.pdfBlobUrl = base64ToBlobUrl(latest.pdf, 'application/pdf');
+          }
+          previewEl.innerHTML = '<iframe src="' + latest.pdfBlobUrl + '#toolbar=0" width="100%" height="100%" style="border:none; border-radius:10px; min-height: 400px;"></iframe>' + 
+            '<div style="text-align:center; padding: 10px;"><a href="' + latest.pdfBlobUrl + '" download="document.pdf" style="display:inline-block; padding: 8px 16px; background: var(--brand); color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold;">⬇ Download PDF directly</a></div>';
+          return;
+        }
+        previewEl.innerHTML = latest.json === null ? window.__JSON_PLACEHOLDER__ : syntaxHighlightJson(latest.json);
       }
 
       document.querySelectorAll('.tab').forEach((el) => {
@@ -574,8 +695,28 @@ function renderHtml(): string {
           if (Array.isArray(data.logs)) {
             data.logs.forEach((line) => addLog(line[0], line[1], line[2]));
           }
-          if (data.screenshot) latest.screenshot = data.screenshot;
-          if (data.json !== undefined) latest.json = data.json;
+          let switchedTab = false;
+          if (data.screenshot) {
+            latest.screenshot = data.screenshot;
+            currentTab = 'shot';
+            switchedTab = true;
+          }
+          if (data.pdf) {
+            latest.pdf = data.pdf;
+            if (latest.pdfBlobUrl) URL.revokeObjectURL(latest.pdfBlobUrl);
+            latest.pdfBlobUrl = null;
+            currentTab = 'pdf';
+            switchedTab = true;
+          }
+          if (data.json !== undefined) {
+            latest.json = data.json;
+            if (!switchedTab) currentTab = 'json';
+          }
+          
+          document.querySelectorAll('.tab').forEach((b) => {
+            b.classList.toggle('active', b.dataset.tab === currentTab);
+          });
+          
           renderPreview();
           if (data.error) {
             addLog('error', data.error);
